@@ -20,6 +20,7 @@
 package org.zaproxy.zap.extension.fuzz.httpfuzzer.processors;
 
 import java.awt.Dimension;
+import java.awt.GridBagLayout;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
@@ -44,6 +45,7 @@ import org.zaproxy.zap.extension.script.ExtensionScript;
 import org.zaproxy.zap.extension.script.ScriptWrapper;
 import org.zaproxy.zap.utils.SortedComboBoxModel;
 import org.zaproxy.zap.view.DynamicFieldsPanel;
+import org.zaproxy.zap.view.LayoutHelper;
 
 public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 		HttpFuzzerMessageProcessorUIHandler<FuzzerHttpMessageScriptProcessorAdapter, FuzzerHttpMessageScriptProcessorAdapterUI> {
@@ -217,14 +219,29 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 				mainPanel.remove(1);
 			}
 			
-			dynamicFieldsPanel = new DynamicFieldsPanel(requiredParameters, optionalParameters);			
-			if (requiredParameters.length > 0 || optionalParameters.length > 0) {				
+			dynamicFieldsPanel = new DynamicFieldsPanel(requiredParameters, optionalParameters);				
+			if (requiredParameters.length > 0 || optionalParameters.length > 0) {
+				alignFieldsToTheTop(dynamicFieldsPanel, requiredParameters.length + optionalParameters.length);		
 				JScrollPane scrollPane = new JScrollPane(dynamicFieldsPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 				mainPanel.add(scrollPane);
 			}			
 
 			mainPanel.revalidate();
-			mainPanel.repaint();
+			mainPanel.repaint();		
+		}
+		
+		private void alignFieldsToTheTop(DynamicFieldsPanel dynamicFieldsPanel, int fieldsCount) {
+			GridBagLayout gridBagLayout = (GridBagLayout)dynamicFieldsPanel.getLayout();				    		    
+			int newRowCount = fieldsCount + 1;
+			int lastRowIndex = newRowCount - 1;
+			double[] rowWeights = new double[newRowCount];
+			for (int i = 0; i < newRowCount; i++) {
+				rowWeights[i] = 0.0;
+			}
+			
+			rowWeights[lastRowIndex] = 1.0;			
+			dynamicFieldsPanel.add(new JPanel(), LayoutHelper.getGBC(0, lastRowIndex, 2, 0.0d, 0.0d));
+			gridBagLayout.rowWeights = rowWeights;		
 		}
 
 		@Override
