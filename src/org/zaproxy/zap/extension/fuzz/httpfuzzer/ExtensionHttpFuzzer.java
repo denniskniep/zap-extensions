@@ -39,6 +39,7 @@ import org.zaproxy.zap.extension.fuzz.httpfuzzer.messagelocations.TextHttpMessag
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.AntiCsrfHttpFuzzerMessageProcessorUIHandler;
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.FuzzerHttpMessageScriptProcessorAdapterUIHandler;
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.HttpFuzzerProcessorScript;
+import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.HttpFuzzerProcessorScriptProxy;
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.HttpFuzzerReflectionDetectorStateHighlighter;
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.HttpFuzzerReflectionDetectorUIHandler;
 import org.zaproxy.zap.extension.fuzz.httpfuzzer.processors.RequestContentLengthUpdaterProcessorUIHandler;
@@ -107,7 +108,7 @@ public class ExtensionHttpFuzzer extends ExtensionAdaptor {
         ExtensionScript extensionScript = Control.getSingleton().getExtensionLoader().getExtension(ExtensionScript.class);
         if (extensionScript != null) {
             scriptType = new ScriptType(
-                    HttpFuzzerProcessorScript.TYPE_NAME,
+                    HttpFuzzerProcessorScriptProxy.TYPE_NAME,
                     "fuzz.httpfuzzer.script.type.fuzzerprocessor",
                     HTTP_FUZZER_PROCESSOR_SCRIPT_ICON,
                     true);

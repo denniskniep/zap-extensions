@@ -19,6 +19,8 @@
  */
 package org.zaproxy.zap.extension.fuzz.httpfuzzer.processors;
 
+import java.util.Map;
+
 import javax.script.ScriptException;
 
 import org.parosproxy.paros.network.HttpMessage;
@@ -33,12 +35,7 @@ import org.zaproxy.zap.extension.fuzz.httpfuzzer.HttpFuzzerTaskProcessorUtils;
  * @see HttpFuzzerTaskProcessorUtils
  */
 public interface HttpFuzzerProcessorScript {
-
-    /**
-     * The name used to identify the type of this script, for example, in configurations.
-     */
-    final static String TYPE_NAME = "httpfuzzerprocessor";
-
+    
     /**
      * Processes the fuzzed message before being forward to the server.
      *
@@ -57,4 +54,6 @@ public interface HttpFuzzerProcessorScript {
      * @throws ScriptException if an error occurs while executing the script
      */
     boolean processResult(HttpFuzzerTaskProcessorUtils utils, HttpFuzzResult result) throws ScriptException;
+  
 }
+
