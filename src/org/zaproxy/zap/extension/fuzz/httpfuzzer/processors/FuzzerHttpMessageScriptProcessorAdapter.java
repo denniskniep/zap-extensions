@@ -44,7 +44,7 @@ public class FuzzerHttpMessageScriptProcessorAdapter implements HttpFuzzerMessag
     private HttpFuzzerProcessorScriptProxy scriptProcessor;
     private Map<String, String> paramValues;
 
-    public FuzzerHttpMessageScriptProcessorAdapter(ScriptWrapper scriptWrapper) {
+    public FuzzerHttpMessageScriptProcessorAdapter(ScriptWrapper scriptWrapper, Map<String, String> paramValues) {
         if (scriptWrapper == null) {
             throw new IllegalArgumentException("Parameter scriptWrapper must not be null.");
         }
@@ -53,17 +53,13 @@ public class FuzzerHttpMessageScriptProcessorAdapter implements HttpFuzzerMessag
                     + HttpFuzzerProcessorScriptProxy.TYPE_NAME + "\".");
         }
         this.scriptWrapper = scriptWrapper;
-        this.paramValues = new HashMap<String, String>();
+        this.paramValues = paramValues;
     }
 
     @Override
     public String getName() {
         return scriptWrapper.getName();
-    }
-        
-    public void setParamValues(Map<String, String> paramValues) {
-        this.paramValues = paramValues;
-    }
+    }      
 
     @Override
     public HttpMessage processMessage(HttpFuzzerTaskProcessorUtils utils, HttpMessage message) throws ProcessingException {

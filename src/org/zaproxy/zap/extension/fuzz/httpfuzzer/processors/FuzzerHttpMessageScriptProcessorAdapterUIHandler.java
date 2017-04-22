@@ -23,6 +23,7 @@ import java.awt.Dimension;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BoxLayout;
 import javax.swing.GroupLayout;
@@ -101,9 +102,11 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 			implements HttpFuzzerMessageProcessorUI<FuzzerHttpMessageScriptProcessorAdapter> {
 
 		private final ScriptWrapper scriptWrapper;
+		private final Map<String, String> paramsValues;
 
-		public FuzzerHttpMessageScriptProcessorAdapterUI(ScriptWrapper scriptWrapper) {
+		public FuzzerHttpMessageScriptProcessorAdapterUI(ScriptWrapper scriptWrapper, Map<String, String> paramsValues) {
 			this.scriptWrapper = scriptWrapper;
+			this.paramsValues = paramsValues;
 		}
 
 		public ScriptWrapper getScriptWrapper() {
@@ -127,12 +130,13 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 
 		@Override
 		public FuzzerHttpMessageScriptProcessorAdapter getFuzzerMessageProcessor() {
-			return new FuzzerHttpMessageScriptProcessorAdapter(scriptWrapper);
+			
+			return new FuzzerHttpMessageScriptProcessorAdapter(scriptWrapper, paramsValues);
 		}
 
 		@Override
 		public FuzzerHttpMessageScriptProcessorAdapterUI copy() {
-			return new FuzzerHttpMessageScriptProcessorAdapterUI(scriptWrapper);
+			return new FuzzerHttpMessageScriptProcessorAdapterUI(scriptWrapper, paramsValues);
 		}
 	}
 
@@ -151,8 +155,8 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 			mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
 			scriptComboBox = new JComboBox<>(new SortedComboBoxModel<ScriptUIEntry>());
 			addScriptsToScriptComboBox(scriptWrappers);
-			addScriptComboBoxItemChangedListener();
-			renderScriptChoicePanel();
+			addScriptComboBoxItemChangedListener();			
+			renderScriptChoicePanel();			
 			renderFieldsPanelForScriptParameters();
 		}
 
@@ -212,15 +216,12 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 			if (mainPanel.getComponentCount() > 1) {
 				mainPanel.remove(1);
 			}
-
-			dynamicFieldsPanel = null;
-			if (requiredParameters.length > 0 || optionalParameters.length > 0) {
-
-				dynamicFieldsPanel = new DynamicFieldsPanel(requiredParameters, optionalParameters);
-				JScrollPane scrollPane = new JScrollPane(dynamicFieldsPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-						JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+			
+			dynamicFieldsPanel = new DynamicFieldsPanel(requiredParameters, optionalParameters);			
+			if (requiredParameters.length > 0 || optionalParameters.length > 0) {				
+				JScrollPane scrollPane = new JScrollPane(dynamicFieldsPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 				mainPanel.add(scrollPane);
-			}
+			}			
 
 			mainPanel.revalidate();
 			mainPanel.repaint();
@@ -233,13 +234,15 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 
 		@Override
 		public void setFuzzerMessageProcessorUI(FuzzerHttpMessageScriptProcessorAdapterUI payloadProcessorUI) {
-			scriptComboBox.setSelectedItem(new ScriptUIEntry(payloadProcessorUI.getScriptWrapper()));
+			scriptComboBox.setSelectedItem(new ScriptUIEntry(payloadProcessorUI.getScriptWrapper()));						
+			dynamicFieldsPanel.bindFieldValues(payloadProcessorUI.paramsValues);
 		}
 
 		@Override
 		public FuzzerHttpMessageScriptProcessorAdapterUI getFuzzerMessageProcessorUI() {
-			return new FuzzerHttpMessageScriptProcessorAdapterUI(
-					((ScriptUIEntry) scriptComboBox.getSelectedItem()).getScriptWrapper());
+			Map<String, String> paramValues = dynamicFieldsPanel.getFieldValues();
+			ScriptWrapper scriptWrapper = ((ScriptUIEntry) scriptComboBox.getSelectedItem()).getScriptWrapper();
+			return new FuzzerHttpMessageScriptProcessorAdapterUI(scriptWrapper, paramValues);
 		}
 
 		@Override
@@ -256,8 +259,8 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 						Constant.messages
 						.getString("fuzz.httpfuzzer.processor.scriptProcessor.panel.warnNoScript.title"));
 				return false;
-			}
-
+			}			
+			
 			try {
 				dynamicFieldsPanel.validateFields();
 			} catch (IllegalStateException ex) {
@@ -266,7 +269,7 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 						.getString("fuzz.httpfuzzer.processor.scriptProcessor.panel.warn.title"));
 				return false;
 			}
-
+			
 			return true;
 		}
 		
