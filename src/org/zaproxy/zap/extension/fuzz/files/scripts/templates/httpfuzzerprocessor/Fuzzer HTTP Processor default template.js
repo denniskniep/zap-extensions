@@ -8,8 +8,11 @@ var count = 1;
  * 
  * @param {HttpFuzzerTaskProcessorUtils} utils - A utility object that contains functions that ease common tasks.
  * @param {HttpMessage} message - The fuzzed message, that will be forward to the server.
+ * @param {Map<String, String>} paramsValues - The values of the parameters configured in the Add Message Processor Dialog.
+ *                                             The paramsValues is a map, having as keys the parameters names (as returned by the getRequiredParamsNames()
+ *                                             and getOptionalParamsNames() functions below)
  */
-function processMessage(utils, message) {
+function processMessage(utils, message, paramsValues) {
 	// To obtain the list of payloads:
 	//    utils.getPayloads()
 	// To obtain original message:
@@ -40,9 +43,12 @@ function processMessage(utils, message) {
  * 
  * @param {HttpFuzzerTaskProcessorUtils} utils - A utility object that contains functions that ease common tasks.
  * @param {HttpFuzzResult} fuzzResult - The result of sending the fuzzed message.
+ * @param {Map<String, String>} paramsValues - The values of the parameters configured in the Add Message Processor Dialog.
+ *                                             The paramsValues is a map, having as keys the parameters names (as returned by the getRequiredParamsNames()
+ *                                             and getOptionalParamsNames() functions below)
  * @return {boolean} Whether the result should be accepted, or discarded and not shown.
  */
-function processResult(utils, fuzzResult){
+function processResult(utils, fuzzResult, paramsValues){
 	// All the above 'utils' functions are available plus:
 	// To raise an alert:
 	//    utils.raiseAlert(risk, confidence, name, description)
@@ -55,3 +61,23 @@ function processResult(utils, fuzzResult){
 	
 	return true;
 }
+
+
+/**
+ * This function is called during the script loading to obtain a list of the names of the required configuration parameters,
+ * that will be shown in the Add Message Processor Dialog for configuration. They can be used
+ * to input dynamic data into the script, from the user interface
+*/
+function getRequiredParamsNames(){
+	return ["exampleParam1", "exampleParam2"];
+}
+
+/**
+ * This function is called during the script loading to obtain a list of the names of the optional configuration parameters,
+ * that will be shown in the Add Message Processor Dialog for configuration. They can be used
+ * to input dynamic data into the script, from the user interface
+*/
+function getOptionalParamsNames(){
+	return ["exampleParam3"];
+}
+

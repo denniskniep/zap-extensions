@@ -24,20 +24,24 @@ public class HttpFuzzerProcessorScriptProxy implements HttpFuzzerProcessorScript
         	
             try{
             	proxy.scriptWithParameters = extensionScript.getInterface(scriptWrapper, HttpFuzzerProcessorScriptWithParameters.class);
-            	return proxy;
+            	if(proxy.scriptWithParameters != null){
+            		return proxy;
+            	}            	
             }catch(Exception e){
             	logNotImplementedInterface(scriptWrapper, HttpFuzzerProcessorScriptWithParameters.class, e);
             }           
         	
         	try {
         		proxy.script = extensionScript.getInterface(scriptWrapper, HttpFuzzerProcessorScript.class);
-        		return proxy;
+    			if(proxy.script != null){
+    				return proxy;
+    			} 
             } catch (Exception e) {
             	logNotImplementedInterface(scriptWrapper, HttpFuzzerProcessorScript.class, e);
             	throw e;
             }
         }
-        return null;
+        throw new IllegalArgumentException("Parameter scriptWrapper does not implement the expected interfaces!");
 	}
 
 	private static <T> void logNotImplementedInterface(ScriptWrapper scriptWrapper, Class<T> classType, Exception e) {

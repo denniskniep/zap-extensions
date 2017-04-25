@@ -20,6 +20,7 @@
 package org.zaproxy.zap.extension.fuzz.httpfuzzer.processors;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.parosproxy.paros.control.Control;
@@ -109,7 +110,12 @@ public class FuzzerHttpMessageScriptProcessorAdapter implements HttpFuzzerMessag
 
     private void validateRequiredParameters() throws ProcessingException {
     	
-    	//throw new ProcessingException("Not all required parameters provided!");
+		for (String requiredParamName : scriptProcessor.getRequiredParamsNames()) {			
+			String value = paramValues.get(requiredParamName);
+			if(value == null || value.trim().isEmpty()){
+				throw new ProcessingException("Failed to process the payload: Not all required parameters provided!");
+			}			
+		}   	
 	}
 
     /// N.B. Catch exception (instead of ScriptException) since Nashorn throws RuntimeException.

@@ -198,6 +198,7 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 
 			scriptChoicePanel
 					.setMaximumSize(new Dimension(Integer.MAX_VALUE, scriptChoicePanel.getPreferredSize().height));
+			
 			mainPanel.add(scriptChoicePanel);
 		}
 
@@ -222,7 +223,7 @@ public class FuzzerHttpMessageScriptProcessorAdapterUIHandler implements
 			dynamicFieldsPanel = new DynamicFieldsPanel(requiredParameters, optionalParameters);				
 			if (requiredParameters.length > 0 || optionalParameters.length > 0) {
 				alignFieldsToTheTop(dynamicFieldsPanel, requiredParameters.length + optionalParameters.length);		
-				JScrollPane scrollPane = new JScrollPane(dynamicFieldsPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+				JScrollPane scrollPane = new JScrollPane(dynamicFieldsPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);				
 				mainPanel.add(scrollPane);
 			}			
 
