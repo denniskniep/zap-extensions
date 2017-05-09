@@ -202,8 +202,17 @@ public class FuzzerDialog<M extends Message, FO extends FuzzerOptions, FMP exten
                     }
                 }
             });
+            
+            JButton exportButton = new JButton("Save");
+            exportButton.addActionListener(new ActionListener() {
 
-            extraButtons = new JButton[] { resetButton };
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                   
+                }
+            });
+
+            extraButtons = new JButton[] { resetButton, exportButton };
         }
         return extraButtons;
     }
