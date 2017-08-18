@@ -731,6 +731,11 @@
 	<target name="deploy-sequence" description="deploy the Sequence extension">
     	<build-deploy-addon name="sequence" />
 	</target>
+
+	<target name="deploy-sequence-without-help-indexes" description="deploy the Sequence extension">
+		<!-- To facilitate quick Dev builds -->
+		<build-deploy-addon-without-help-indexes name="sequence" />
+	</target>
 	
 	<target name="generate-wiki-sequence" description="Generates the wiki for the Sequence scanner addon">
 		<generate-wiki addon="sequence" />
