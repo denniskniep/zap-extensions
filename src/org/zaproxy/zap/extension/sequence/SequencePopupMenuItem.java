@@ -9,7 +9,6 @@ import org.parosproxy.paros.extension.ExtensionPopupMenuItem;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.script.ExtensionScript;
 import org.zaproxy.zap.extension.script.ScriptNode;
-import org.zaproxy.zap.extension.script.ScriptType;
 import org.zaproxy.zap.extension.script.ScriptWrapper;
 import org.zaproxy.zap.extension.script.SequenceScript;
 
@@ -17,32 +16,34 @@ public class SequencePopupMenuItem extends ExtensionPopupMenuItem {
 
 	private static final long serialVersionUID = 1L;
 	
-	private final ExtensionScript extScript;
+	private final ExtensionScript extensionScript;
 	public static final Logger logger = Logger.getLogger(SequencePopupMenuItem.class);
-	private ExtensionSequence extension = null;
+	private ExtensionSequence extensionSequence = null;
 	
 
-	public SequencePopupMenuItem(ExtensionSequence extension, ExtensionScript extensionScript) {
+	public SequencePopupMenuItem(ExtensionSequence extensionSequence, ExtensionScript extensionScript) {
 		super();
-		this.extension = extension;
-		this.extScript = extensionScript;
+		this.extensionSequence = extensionSequence;
+		this.extensionScript = extensionScript;
 		initialize();
 	}
 	
 	private void initialize() {
-		this.setText(extension.getMessages().getString("sequence.popupmenuitem.activeScanSequence"));
+		this.setText(extensionSequence.getMessages().getString("sequence.popupmenuitem.activeScanSequence"));
 		
 		this.addActionListener(new java.awt.event.ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					ScriptWrapper wrapper = (ScriptWrapper)extScript.getScriptUI().getSelectedNode().getUserObject();
-					SequenceScript scr = extScript.getInterface(wrapper, SequenceScript.class);
+					ScriptWrapper wrapper = (ScriptWrapper)extensionScript.getScriptUI().getSelectedNode().getUserObject();
+					SequenceScript scr = extensionScript.getInterface(wrapper, SequenceScript.class);
 					if (scr != null) {
-						extension.setDirectScanScript(wrapper);
+						extensionSequence.setDirectScanScript(wrapper);
 						scr.scanSequence();
+						
+
 					} else {
-						String msg = extension.getMessages().getString("sequence.popupmenuitem.script.error.interface");
+						String msg = extensionSequence.getMessages().getString("sequence.popupmenuitem.script.error.interface");
 						View.getSingleton().showMessageDialog(MessageFormat.format(msg, wrapper.getName()));
 					}
 				} catch(Exception ex) {
@@ -53,33 +54,36 @@ public class SequencePopupMenuItem extends ExtensionPopupMenuItem {
 	}
 
 	@Override
-	public boolean isEnableForComponent(Component invoker) {
-		if(isScriptTree(invoker)) {
-			ScriptNode node = extScript.getScriptUI().getSelectedNode();
-			if(node != null) {
-				if(node.isTemplate()) {
-					return false;
-				}
-				ScriptType type = node.getType();
-				if(type != null) {
-					if(type.getName().equals(ExtensionSequence.TYPE_SEQUENCE)) {
-						Object obj = node.getUserObject();
-						if(obj != null) {						
-							if(obj instanceof ScriptWrapper) {
-								return ((ScriptWrapper) obj).getEngine() != null;
-							}
-						}
-					}
-				}
-			}
-		}
-		return false;
+	public boolean isEnableForComponent(Component component) {
+		return isScriptTree(component) &&
+				isNotATemplate() &&
+				isSequenceScript() &&
+				isScriptWrapperWithEngine();
 	}
-	
-	public boolean isScriptTree(Component component) {
-		return this.extScript.getScriptUI() != null
-		&& component != null
-		&& this.extScript.getScriptUI().getTreeName()
-		.equals(component.getName());
-		}
+
+	private boolean isNotATemplate() {
+		ScriptNode node = getSelectedNode();
+		return node != null && !node.isTemplate();
 	}
+
+	private ScriptNode getSelectedNode() {
+		return extensionScript.getScriptUI().getSelectedNode();
+	}
+
+	private boolean isSequenceScript() {
+		ScriptNode node = getSelectedNode();
+		return node != null && node.getType() != null && node.getType().getName().equals(ExtensionSequence.TYPE_SEQUENCE);
+	}
+
+	private boolean isScriptWrapperWithEngine(){
+		ScriptNode node = getSelectedNode();
+		return node.getUserObject() != null && node.getUserObject() instanceof ScriptWrapper && ((ScriptWrapper) node.getUserObject()).getEngine() != null;
+	}
+
+	private boolean isScriptTree(Component component) {
+		return this.extensionScript.getScriptUI() != null
+				&& component != null
+				&& this.extensionScript.getScriptUI().getTreeName()
+				.equals(component.getName());
+	}
+}
