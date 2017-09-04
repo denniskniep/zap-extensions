@@ -15,20 +15,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class AutomaticSequenceScannerHook implements ScannerHook {
+public class SequenceScannerHook implements ScannerHook {
 
-    private List<ScriptWrapper> directScripts = null;
+    private SequenceScript directSequenceScript = null;
     private ExtensionScript extensionScript;
-    public static final Logger logger = Logger.getLogger(AutomaticSequenceScannerHook.class);
+    public static final Logger logger = Logger.getLogger(SequenceScannerHook.class);
 
-    public AutomaticSequenceScannerHook(ExtensionScript extensionScript) {
+    public SequenceScannerHook(ExtensionScript extensionScript) {
         this.extensionScript = extensionScript;
     }
 
     @Override
     public void scannerComplete() {
         //Reset the sequence extension
-        this.directScripts = null;
+        this.directSequenceScript = null;
     }
 
     @Override
@@ -56,12 +56,15 @@ public class AutomaticSequenceScannerHook implements ScannerHook {
         }
     }
 
-    public void setDirectScanScript(ScriptWrapper script) {
-        directScripts = new ArrayList<>();
-        directScripts.add(script);
+    public void setDirectScanScript(SequenceScript script) {
+        directSequenceScript = script;
     }
 
     private SequenceScript getIncludedSequenceScript(HttpMessage msg, Scanner scanner) {
+        if (hasDirectSeqeunceScript()) {
+            return directSequenceScript;
+        }
+
         List<ScriptWrapper> sequences = getSequenceScripts(scanner);
         return findMatchingSequenceScriptForHttpMessage(sequences, msg);
     }
@@ -83,10 +86,6 @@ public class AutomaticSequenceScannerHook implements ScannerHook {
     }
 
     private List<ScriptWrapper> getSequenceScripts(Scanner scanner) {
-        if (hasDirectScripts()) {
-            return directScripts;
-        }
-
         Set<ScriptCollection> scs = scanner.getScriptCollections();
         if (scs != null) {
             for (ScriptCollection sc : scs) {
@@ -99,13 +98,13 @@ public class AutomaticSequenceScannerHook implements ScannerHook {
         return new ArrayList<>();
     }
 
-    private boolean hasDirectScripts(){
-        return directScripts != null;
+    private boolean hasDirectSeqeunceScript(){
+        return directSequenceScript != null;
     }
 
     private void updateMessage(HttpMessage msg, HttpMessage newMsg) {
         msg.setRequestHeader(newMsg.getRequestHeader());
         msg.setRequestBody(newMsg.getRequestBody());
-        msg.setCookies(new ArrayList<HttpCookie>());
+        msg.setCookies(new ArrayList<HttpCookie>()); // TODO: Check this please!
     }
 }

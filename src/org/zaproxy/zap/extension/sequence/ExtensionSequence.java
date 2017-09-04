@@ -32,15 +32,16 @@ import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.ViewDelegate;
+import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.zaproxy.zap.extension.ascan.ExtensionActiveScan;
 import org.zaproxy.zap.extension.script.ExtensionScript;
 import org.zaproxy.zap.extension.script.ScriptType;
-import org.zaproxy.zap.extension.script.ScriptWrapper;
+import org.zaproxy.zap.extension.script.SequenceScript;
 
 public class ExtensionSequence extends ExtensionAdaptor {
 
 	private static final List<Class<?>> DEPENDENCIES;
-	private final AutomaticSequenceScannerHook sequenceScannerHook;
+	private final SequenceScannerHook sequenceScannerHook;
 
 	private ExtensionScript extScript;
 	private ExtensionActiveScan extActiveScan;
@@ -57,11 +58,12 @@ public class ExtensionSequence extends ExtensionAdaptor {
 	private SequenceAscanPanel sequencePanel;
 
 	private ScriptType scriptType;
+	private ExtensionHistory extHistory;
 
 	public ExtensionSequence() {
 		super("ExtensionSequence");
 		this.setOrder(29);
-		sequenceScannerHook = new AutomaticSequenceScannerHook(getExtScript());
+		sequenceScannerHook = new SequenceScannerHook(getExtScript());
 	}
 	
 	@Override
@@ -115,14 +117,14 @@ public class ExtensionSequence extends ExtensionAdaptor {
 		getExtScript().registerScriptType(scriptType);
 
 		if (getView() != null) {
-			extensionhook.getHookMenu().addPopupMenuItem(new SequencePopupMenuItem(this, getExtScript()));
+			extensionhook.getHookMenu().addPopupMenuItem(new SequencePopupMenuItem(this, getExtScript(), this.getExtHistory(), this.getExtActiveScan() ));
 		}
 
 		//Add class as a scannerhook (implements the scannerhook interface)
 		extensionhook.addScannerHook(sequenceScannerHook);
 	}
 
-	public void setDirectScanScript(ScriptWrapper script) {
+	public void setDirectScanScript(SequenceScript script) {
 		sequenceScannerHook.setDirectScanScript(script);
 	}
 
@@ -131,6 +133,13 @@ public class ExtensionSequence extends ExtensionAdaptor {
 			extScript = Control.getSingleton().getExtensionLoader().getExtension(ExtensionScript.class);
 		}
 		return extScript;
+	}
+
+	private ExtensionHistory getExtHistory() {
+		if(extHistory == null) {
+			extHistory = Control.getSingleton().getExtensionLoader().getExtension(ExtensionHistory.class);
+		}
+		return extHistory;
 	}
 
 	private ExtensionActiveScan getExtActiveScan(){
