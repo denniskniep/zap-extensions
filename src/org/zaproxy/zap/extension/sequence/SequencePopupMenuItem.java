@@ -7,27 +7,23 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.net.URLDecoder;
 import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.commons.httpclient.URI;
-import org.apache.commons.httpclient.URIException;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.extension.Extension;
-import org.parosproxy.paros.extension.ExtensionPopupMenuItem;
 import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.HistoryReference;
-import org.parosproxy.paros.model.SiteMap;
+import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.network.HttpSender;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.ExtensionPopupMenu;
-import org.zaproxy.zap.extension.ascan.CustomScanDialog;
-import org.zaproxy.zap.extension.ascan.CustomScanPanel;
 import org.zaproxy.zap.extension.ascan.ExtensionActiveScan;
 import org.zaproxy.zap.extension.script.ExtensionScript;
 import org.zaproxy.zap.extension.script.ScriptNode;
@@ -36,6 +32,8 @@ import org.zaproxy.zap.extension.script.SequenceScript;
 import org.zaproxy.zap.model.StructuralNode;
 import org.zaproxy.zap.model.StructuralSiteNode;
 import org.zaproxy.zap.model.Target;
+import org.zaproxy.zap.network.DefaultHttpRedirectionValidator;
+import org.zaproxy.zap.network.HttpRequestConfig;
 
 import javax.swing.*;
 import javax.swing.event.MenuEvent;
@@ -89,10 +87,11 @@ public class SequencePopupMenuItem extends ExtensionPopupMenu {
 	}
 
 	private void addItems(){
-		SequenceScript selectedScript = getSelectedSequenceScript(0);
+		SequenceScript selectedScript = getSelectedSequenceScript();
 		List<HttpMessage> httpMessages = selectedScript.getAllRequestsInScript();
-		int messageIndex = 0;
 		this.removeAll();
+		addRunAllItem();
+		int messageIndex = 0;
 		for (HttpMessage message : httpMessages) {
 			addItem(message, messageIndex++);
 		}
@@ -113,6 +112,23 @@ public class SequencePopupMenuItem extends ExtensionPopupMenu {
 		});
 	}
 
+	private void addRunAllItem(){
+		final SequenceScript localScript = getSelectedSequenceScript();
+		JMenuItem item = new JMenuItem("Run all");
+		this.add(item);
+
+		item.addActionListener(new java.awt.event.ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				localScript.scanSequence();
+			}
+		});
+	}
+
+	private SequenceScript getSelectedSequenceScript() {
+		return getSelectedSequenceScript(-1);
+	}
+
 	private SequenceScript getSelectedSequenceScript(int indexOfMessage) {
 		try {
 			ScriptWrapper wrapper = getSelectedScript();
@@ -130,7 +146,7 @@ public class SequencePopupMenuItem extends ExtensionPopupMenu {
 
 	private SequenceScript tryGetSequenceScript(int indexOfMessage, ScriptWrapper wrapper) throws javax.script.ScriptException, IOException {
 
-		if(wrapper.getClass().getName() == "org.zaproxy.zap.extension.zest.ZestScriptWrapper"){
+		if(wrapper.getClass().getName() == "org.zaproxy.zap.extension.zest.ZestScriptWrapper" && indexOfMessage >= 0){
 			try {
 				Class zestScriptWrapperClass = Class.forName("org.zaproxy.zap.extension.zest.ZestScriptWrapper");
 				Class extensionZestClass = Class.forName("org.zaproxy.zap.extension.zest.ExtensionZest");
@@ -150,63 +166,61 @@ public class SequencePopupMenuItem extends ExtensionPopupMenu {
 	private ScriptWrapper getSelectedScript() {
 		return (ScriptWrapper) getSelectedNode().getUserObject();
 	}
-	/*
-	private void initialize() {
 
-		
-		this.addActionListener(new java.awt.event.ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					ScriptWrapper wrapper = (ScriptWrapper)extensionScript.getScriptUI().getSelectedNode().getUserObject();
-					SequenceScript scr = extensionScript.getInterface(wrapper, SequenceScript.class);
-					if (scr != null) {
-						extensionSequence.setDirectScanScript(wrapper);
-						startActiveScanner(wrapper, scr);
-
-						//scr.scanSequence();
-
-
-					} else {
-						String msg = extensionSequence.getMessages().getString("sequence.popupmenuitem.script.error.interface");
-						View.getSingleton().showMessageDialog(MessageFormat.format(msg, wrapper.getName()));
-					}
-				} catch(Exception ex) {
-					logger.warn("An exception occurred while starting an active scan for a sequence script:", ex);	
-				}
-			}
-		});
-	}*/
 
 	private void startActiveScanner(int index) {
-		SequenceScript sequenceScript = getSelectedSequenceScript(index);
-		SiteNode node = createTargetToScanSequence(sequenceScript, index);
-		extensionSequence.setDirectScanScript(sequenceScript);
-		extensionActiveScan.showCustomScanDialog(node);
-		//showDialog(target);
+		try {
+			SequenceScript sequenceScript = getSelectedSequenceScript(index);
+			SiteNode node = createTargetToScanOneRequestOfSequence(sequenceScript, index);
+			extensionSequence.setDirectScanScript(sequenceScript);
+			extensionActiveScan.showCustomScanDialog(node);
+		}catch (Exception ex){
+			logger.error("Error while starting Active Scanner for Sequence Request", ex);
+		}
 	}
 
-	private void showDialog(Target target){
-		SequenceCustomScanDialog.showCustomScanDialog(extensionActiveScan, target);
-	}
-
-	private SiteNode createTargetToScanSequence(SequenceScript script, int index) {
-		/*String name = Constant.messages.getString("zest.script.sequence.scanname", wrapper.getName());
-
-		SiteNode fakeRoot = new SiteNode(null, SEQUENCE_HISTORY_TYPE, name);
-		SiteNode fakeDirectory = new SiteNode(null, SEQUENCE_HISTORY_TYPE, name);*/
-
+	private SiteNode createTargetToScanOneRequestOfSequence(SequenceScript script, int index) throws IOException {
 		HttpMessage msg = script.getAllRequestsInScript().get(index);
+		//ToDo: Execute...for baseline maybe a methond in ZestIndexBasedZestRunner
+		msg = sendAndReceiveOriginalHttpMessage(script, msg);
 		return messageToSiteNode(msg, index);
-
-
-		/*Target target = new SequenceTarget(new SequenceStructuralSiteNode(fakeRoot, name, uri), name);
-		target.setRecurse(true);
-		return target;*/
 	}
 
-	private SiteNode messageToSiteNode(HttpMessage msg, int messageIndex)
-	{
+	// Run the Sequence Script before scanner to have a baseline (originalMessage)
+	private HttpMessage sendAndReceiveOriginalHttpMessage(SequenceScript sequenceScript, HttpMessage originalHttpMessage) throws IOException {
+		HttpSender httpSender = createHttpSender();
+		HttpMessage tmpHttpMessage = sequenceScript.runSequenceBefore(originalHttpMessage.cloneAll(), null);
+		try {
+			HttpRequestConfig config = HttpRequestConfig
+					.builder()
+					.setRedirectionValidator(DefaultHttpRedirectionValidator.INSTANCE)
+					.setFollowRedirects(true)
+					.build();
+			httpSender.sendAndReceive(tmpHttpMessage, config);
+
+		} catch (IOException ex) {
+			logger.error("An exception occurred while sending the OriginalHttpMessage before starting the fuzzer:", ex);
+			throw ex;
+		}
+		sequenceScript.runSequenceAfter(tmpHttpMessage, null);
+
+		// Copy only the Response to HttpMessage template for scanner
+		// Request may contain variables
+		originalHttpMessage.setResponseHeader(tmpHttpMessage.getResponseHeader());
+		originalHttpMessage.setResponseBody(tmpHttpMessage.getResponseBody());
+		return originalHttpMessage;
+	}
+
+	private HttpSender createHttpSender() {
+
+		HttpSender httpSender = new HttpSender(Model.getSingleton().getOptionsParam().getConnectionParam(), true, HttpSender.ACTIVE_SCANNER_INITIATOR);
+		//TODO: get the current user from the dialog....?
+		//httpSender.setUser(this.user);
+		httpSender.setRemoveUserDefinedAuthHeaders(true);
+		return httpSender;
+	}
+
+	private SiteNode messageToSiteNode(HttpMessage msg, int messageIndex){
 		SiteNode temp = null;
 		try {
 			int messageNumber = messageIndex+1;
@@ -267,87 +281,4 @@ public class SequencePopupMenuItem extends ExtensionPopupMenu {
 				&& this.extensionScript.getScriptUI().getTreeName()
 				.equals(component.getName());
 	}
-
-	private static class SequenceStructuralSiteNode extends StructuralSiteNode {
-
-		private final String customName;
-		private final URI customURI;
-		private final SequenceStructuralSiteNode childNode;
-
-		public SequenceStructuralSiteNode(SiteNode rootNode, String customName, URI customURI) {
-			super(rootNode);
-			this.customName = customName;
-			this.customURI = customURI;
-			this.childNode = new SequenceStructuralSiteNode((SiteNode) rootNode.getChildAt(0), customName, customURI, null);
-		}
-
-		private SequenceStructuralSiteNode(SiteNode node, String customName, URI customURI, Object dummy) {
-			super(node);
-			this.customName = customName;
-			this.customURI = customURI;
-			this.childNode = null;
-		}
-
-		@Override
-		public String getName() {
-			return customName;
-		}
-
-		@Override
-		public URI getURI() {
-			return customURI;
-		}
-
-		@Override
-		public Iterator<StructuralNode> getChildIterator() {
-			if (childNode != null) {
-				return new SingleStructuralSiteNodeIterator(childNode);
-			}
-			return super.getChildIterator();
-		}
-
-		private static class SingleStructuralSiteNodeIterator implements Iterator<StructuralNode> {
-
-			private final SequenceStructuralSiteNode node;
-			private boolean exhausted;
-
-			public SingleStructuralSiteNodeIterator(SequenceStructuralSiteNode node) {
-				this.node = node;
-			}
-
-			@Override
-			public boolean hasNext() {
-				return !exhausted;
-			}
-
-			@Override
-			public StructuralSiteNode next() {
-				if (exhausted) {
-					throw new NoSuchElementException("No more (fake) sequence nodes.");
-				}
-				exhausted = true;
-				return node;
-			}
-
-			@Override
-			public void remove() {
-			}
-		}
-	}
-
-	private static class SequenceTarget extends Target {
-
-		private final String displayName;
-
-		public SequenceTarget(StructuralSiteNode node, String displayName) {
-			super(node);
-			this.displayName = displayName;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return displayName;
-		}
-	}
 }
-
