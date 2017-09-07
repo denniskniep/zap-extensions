@@ -18,6 +18,7 @@ import org.zaproxy.zap.extension.script.ScriptWrapper;
 import org.zaproxy.zap.extension.script.SequenceScript;
 
 import javax.script.ScriptException;
+import java.awt.*;
 import java.io.IOException;
 import java.net.HttpCookie;
 import java.util.ArrayList;
@@ -28,11 +29,9 @@ import java.util.regex.Pattern;
 public class SequenceScannerHook implements ScannerHook {
 
     private SequenceScript directSequenceScript = null;
-    private Scanner currentScanner = null;
     private ExtensionScript extensionScript;
     public static final Logger logger = Logger.getLogger(SequenceScannerHook.class);
     private final Pattern bracketsReplacePattern = Pattern.compile("(%7B%7B)(.*?)(%7D%7D)", Pattern.DOTALL);
-    private List<Integer> historyIdsMarkedToRemove = null;
 
     public SequenceScannerHook(ExtensionScript extensionScript) {
         this.extensionScript = extensionScript;
@@ -40,12 +39,8 @@ public class SequenceScannerHook implements ScannerHook {
 
     @Override
     public void scannerComplete() {
-        removeAllMarkedHistoryIdsFromActiveScanPanel();
-
         //Reset the sequence extension
         this.directSequenceScript = null;
-        this.historyIdsMarkedToRemove = null;
-        this.currentScanner = null;
     }
 
     @Override
@@ -61,7 +56,7 @@ public class SequenceScannerHook implements ScannerHook {
                 UnescapeVarBracketsForReplacement(msg);
                 HttpMessage newMsg = seqScr.runSequenceBefore(msg, plugin);
                 updateMessage(msg, newMsg);
-                addHistoryReferenceIfNotExists(msg);
+                addHistoryReferenceToMessageIfNotExists(msg);
             }
         }catch (Exception ex){
             logger.error("Error in beforeScan of SequenceScannerHook", ex);
@@ -80,8 +75,8 @@ public class SequenceScannerHook implements ScannerHook {
             if(seqScr!= null) {
                 HttpSender httpSender = plugin.getParent().getHttpSender();
                 HttpRedirectFollower.followRedirections(msg, HttpRedirectFollower.getHttpRequestConfig(plugin), httpSender);
-                markToRemoveLaterOnScannerComplete(scanner, msg);
-                overwriteHistoryReferenceToRefreshTheView(msg);
+                removeMessageFromActiveScanPanelInEdt(msg, scanner);
+                overwriteHistoryReferenceInMessage(msg);
                 addMessageToActiveScanPanel(plugin, msg);
                 seqScr.runSequenceAfter(msg, plugin);
             }
@@ -91,44 +86,38 @@ public class SequenceScannerHook implements ScannerHook {
         }
     }
 
-    private void addHistoryReferenceIfNotExists(HttpMessage msg) throws DatabaseException, HttpMalformedHeaderException {
-        HistoryReference hRef = msg.getHistoryRef();
-        if (hRef == null) {
-            overwriteHistoryReferenceToRefreshTheView(msg);
+    private void removeMessageFromActiveScanPanelInEdt(HttpMessage msg, Scanner scanner) {
+        if(scanner instanceof ActiveScan && msg.getHistoryRef() != null) {
+            final ActiveScan activeScan = (ActiveScan)scanner;
+            final ActiveScanTableModel tableModel = activeScan.getMessagesTableModel();
+            final int historyId = msg.getHistoryRef().getHistoryId();
+
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    //activeScan.getMessagesIds().remove(historyId);
+                    tableModel.removeEntry(historyId);
+                }
+            });
         }
     }
 
-    private void overwriteHistoryReferenceToRefreshTheView(HttpMessage msg) throws DatabaseException, HttpMalformedHeaderException {
+    private void addHistoryReferenceToMessageIfNotExists(HttpMessage msg) throws DatabaseException, HttpMalformedHeaderException {
+        HistoryReference hRef = msg.getHistoryRef();
+        if (hRef == null) {
+            overwriteHistoryReferenceInMessage(msg);
+        }
+    }
+
+    private void overwriteHistoryReferenceInMessage(HttpMessage msg) throws DatabaseException, HttpMalformedHeaderException {
         new HistoryReference(
                 Model.getSingleton().getSession(),
                 HistoryReference.TYPE_SCANNER_TEMPORARY,
                 msg);
     }
 
-    private void markToRemoveLaterOnScannerComplete(Scanner scanner, HttpMessage msg) {
-        currentScanner = scanner;
-        synchronized (this){
-            if(historyIdsMarkedToRemove == null){
-                historyIdsMarkedToRemove  = new ArrayList<>();
-            }
-            historyIdsMarkedToRemove.add(msg.getHistoryRef().getHistoryId());
-        }
-    }
-
     private void addMessageToActiveScanPanel(AbstractPlugin plugin, HttpMessage msg) {
         plugin.getParent().notifyNewMessage(msg);
-    }
-
-    private void removeAllMarkedHistoryIdsFromActiveScanPanel() {
-        if(currentScanner instanceof ActiveScan && historyIdsMarkedToRemove != null){
-            ActiveScan activeScan = (ActiveScan)currentScanner;
-            ActiveScanTableModel tableModel = activeScan.getMessagesTableModel();
-
-            for (Integer historyId : historyIdsMarkedToRemove){
-                activeScan.getMessagesIds().remove(historyId);
-                tableModel.removeEntry(historyId);
-            }
-        }
     }
 
     //ToDo: Maybe useful also for the IndexBasedZestRunner?
