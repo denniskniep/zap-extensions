@@ -395,6 +395,7 @@
 		<build-addon name="frontendscanner" />
 		<build-addon name="gettingStarted" />
 		<build-addon name="groovy" />
+		<build-addon name="logreader" />
 		<build-addon name="help" />
 		<build-addon name="help_pt_BR" />
 		<build-addon name="onlineMenu" />
@@ -412,6 +413,9 @@
 	<macrodef name="deploy-addon" description="deploy the specified extension">
 		<attribute name="name"/>
 		<sequential>
+			<delete dir="${zap.plugin.dir}">
+				<include name="@{name}-*.zap"/>
+			</delete>
 			<copy todir="${zap.plugin.dir}">
 				<fileset dir="${dist}">
 				<include name="@{name}-*.zap"/>
@@ -502,6 +506,15 @@
 
 	<target name="generate-wiki-gettingStarted" description="Generates the wiki of gettingStarted">
 		<generate-wiki-core addon="gettingStarted" />
+	</target>
+
+	<target name="deploy-logreader" description="deploy the logreader extension">
+		<build-deploy-addon name="logreader" />
+	</target>
+
+	<target name="deploy-logreader-without-help-indexes" description="deploy the logreader extension without help indexes">
+		<!-- To facilitate quick Dev builds -->
+		<build-deploy-addon-without-help-indexes name="logreader" />
 	</target>
 
 	<target name="deploy-groovy" description="deploy the groovy extension">
